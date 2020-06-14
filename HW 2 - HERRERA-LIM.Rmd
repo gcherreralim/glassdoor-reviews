@@ -1,0 +1,845 @@
+---
+title: |
+  ![](/Volumes/GoogleDrive/My Drive/Laptop Files/1920B1/MW 1 Unstructured Data Analytics/02 Assignments/Homework 2/header2.png)
+output:
+  html_document:
+    theme: cerulean
+    highlight: pygments
+    toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 3
+    code_folding: "hide"
+    includes:
+      after_body: "/Volumes/GoogleDrive/My Drive/Laptop Files/1920B1/General Files/RMD/footer.html"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+<style>
+#TOC {
+  background: url("https://lh3.googleusercontent.com/Xy7jdbNKeyhYTmlhsDNlauYeuHIKsK0x-DPAb1pwzfIyafyOm7zNLFKR0o9ie9dCGvg");
+  background-size: 130px 64px;
+  background-position: top center;
+  padding-top: 60px !important;
+  background-repeat: no-repeat;
+  background-color: #0CAA41;
+  top: 1%;
+  opacity: 0.3;
+}
+#TOC:hover {
+  opacity:1;
+}
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+  color: #FFFFFF;
+  background-color: #0CAA41;
+  font-family: Avenir Next;
+  font-weight: 700;
+}
+.list-group-item {
+  color: #0CAA41;
+  background-color: #FFFFFF;
+}
+.nav>li>a {
+  position: relative;
+  display: block;
+  color: #FFFFFF;
+  background-color: #0CAA41;
+}
+  .nav>li>a:hover {
+    background-color: #FFFFFF;
+    color: #0CAA41;
+  }
+.nav-pills > li.active > a, .nav-pills > li.active > a:focus {
+  color: #FFFFFF;
+  background-color: #0CAA41;
+}
+  .nav-pills > li.active > a:hover {
+    background-color: #FFFFFF;
+    color: #0CAA41;
+  }
+.btn {
+  background-color: black;
+  border: none;
+  color: black;
+  font-size: 10px;
+}
+button.btn:hover {
+  color: #0CAA41;
+}
+button.btn.btn-default.btn-xs.dropdown-toggle {
+  background-color: black;
+}
+.dropdown-menu {
+  background-color: #0CAA41;
+}
+.dropdown-menu #rmd-show-all-code {
+  color: black;
+  font-family: Avenir Next;
+  font-size: 10px;
+}
+.dropdown-menu #rmd-show-all-code:hover {
+  background-color: black;
+  color: white;
+}
+.dropdown-menu #rmd-hide-all-code {
+  color: black;
+  font-family: Avenir Next;
+  font-size: 10px;
+}
+.dropdown-menu #rmd-hide-all-code:hover {
+  background-color: black;
+  color:white;
+}
+</style>
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 12px;
+      font-family: Avenir Next;
+      color: white;
+      text-align: justify;
+      background-color: black;
+  }
+td {  /* Table  */
+  font-size: 8px;
+}
+h1.title {
+  font-size: 38px;
+  color: #0CAA41;
+  font-family: 'Avenir Next', sans-serif;
+  font-style: black;
+  font-weight: 800;
+  padding-top: 10px;
+  text-align: center;
+  text-decoration: underline;
+  margin-bottom: 5px;
+}
+h3.subtitle {
+  font-size: 25px;
+  color: #0CAA41;
+  font-family: 'Lato', sans-serif;
+  font-weight: 600;
+  font-style: bold;
+  text-align: center;
+  margin: 0px;
+}
+h4 {
+  font-size: 18px;
+  font-family: Avenir Next;
+  color: #0CAA41;
+  font-weight: 700;
+}
+h4.author {
+  font-size: 20px;
+  color: #0CAA41;
+  font-family: 'Lato', sans-serif;
+  font-style: bold;
+  text-align: center;
+  margin: 0px;
+}
+h2 { /* Header 3 */
+  font-size: 18px;
+  font-family: Avenir Next;
+  color: #0CAA41;
+  font-weight: 700;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+    font-family: Avenir Next;
+    color: #2B2D2F;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 10px;
+    font-family: Avenir Next;
+    color: #AE9142
+    background-color: #2B2D2F;
+}
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #0CAA41;
+}
+
+</style>
+
+
+***
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(rmarkdown)
+library(stringr)
+library(tm)
+library(textdata)
+library(lexicon)
+library(tidytext)
+library(rmarkdown)
+library(DT)
+
+load("/Volumes/GoogleDrive/My Drive/Laptop Files/1920B1/MW 1 Unstructured Data Analytics/02 Assignments/Homework 2/glassDoor.rdata")
+gs = glassDoor
+```
+
+## Cleaning Data
+To clean the data, I first turned all rating columns into numeric columns (for easier rounding and prediction later on)
+```{r}
+#str(gs)
+asnum = function(x) as.numeric(as.character(x))
+facnum = function(y) modifyList(y, lapply(y[, sapply(y, is.factor)],asnum))
+
+gs = facnum(gs)
+
+#changing word errors
+#ORGA/B/C/D to 'e'
+gs[317:326,1] = gsub("ORG[A-Z]","e", gs[317:326,1])
+gs[317:326,2] = gsub("ORG[A-Z]","e", gs[317:326,2])
+gs[317:326,3] = gsub("ORG[A-Z]","e", gs[317:326,3])
+gs[1641,1] = gsub("ORG[A-Z]","a", gs[1641,1])
+gs[1641,2] = gsub("ORG[A-Z]","a", gs[1641,2])
+
+#splitting words that run together
+gs$pros = gsub("([a-z])([A-Z])", "\\1 \\2", gs$pros)
+gs$cons = gsub("([a-z])([A-Z])", "\\1 \\2", gs$cons)
+gs$advice = gsub("([a-z])([A-Z])", "\\1 \\2", gs$advice)
+#line 374?
+
+#removing punctuations
+gs$pros = gsub("[[:punct:]]", " ", gs$pros)
+gs$cons = gsub("[[:punct:]]", " ", gs$cons)
+gs$advice = gsub("[[:punct:]]", " ", gs$advice)
+
+#removing numbers
+gs$pros = removeNumbers(gs$pros)
+gs$cons = removeNumbers(gs$cons)
+gs$advice = removeNumbers(gs$advice)
+
+#trimming whitespace
+gs$pros = str_squish(gs$pros)
+gs$cons = str_squish(gs$cons)
+gs$advice = str_squish(gs$advice)
+
+#removing rows containing other languages
+foreignwords = c('auf','und','ganz','von','gute','zeit','viele','keine','ich','eine','mondiale','klarer','goede','nach', 'esprit')
+gs = gs %>%
+  filter(!grepl(paste(foreignwords, collapse="|"), pros))
+
+gs = gs %>%
+  mutate(organization = as.factor(organization))
+
+```
+
+***
+
+## Sentiment Analysis {.tabset .tabset-fade .tabset-pills}
+
+### Loading Sentiment Tables
+Using the `nrc` lexicon for my analysis.
+
+```{r, message = FALSE}
+gs = gs %>%
+  mutate(id = 1:n()) %>%
+  select(id, everything())
+
+#get_sentiments("nrc")
+nrcWord = textdata::lexicon_nrc()
+nrcValues = lexicon::hash_sentiment_nrc
+```
+
+***
+
+### Setting Up Sentiment Tables for Each Review
+
+For the foundation of my sentiment analysis, I'll be splitting and assessing sentiment for pros, cons, and advice. I'll also be placing average sentiments within the main database to see any trends that appear.
+
+```{r}
+### PROS
+pros = gs %>%
+  select(id, pros) %>%
+  unnest_tokens(., word, pros)
+
+pros$word = removeWords(pros$word, words = stopwords("en"))
+pros = pros %>%
+  filter(word != "")
+pros = pros %>%
+  inner_join(nrcValues, by = c("word" = "x"))
+pros = pros %>%
+  inner_join(nrcWord, by = c("word" = "word"))
+# pros %>%
+#   group_by(id) %>%
+#   summarize(ave = mean(y))
+pros = pros %>%
+  rename("pro_word" = "word",
+         "pro_score" = "y",
+         "pro_sent" = "sentiment")
+
+### CONS
+cons = gs %>%
+  select(id, cons) %>%
+  unnest_tokens(., word, cons)
+
+cons$word = removeWords(cons$word, words = stopwords("en"))
+cons = cons %>%
+  filter(word != "")
+cons = cons %>%
+  inner_join(nrcValues, by = c("word" = "x"))
+cons = cons %>%
+  inner_join(nrcWord, by = c("word" = "word"))
+cons = cons %>%
+  rename("con_word" = "word",
+         "con_score" = "y",
+         "con_sent" = "sentiment")
+
+### ADVICE 
+advice = gs %>%
+  select(id, advice) %>%
+  unnest_tokens(., word, advice)
+
+advice$word = removeWords(advice$word, words = stopwords("en"))
+advice = advice %>%
+  filter(word != "")
+advice = advice %>%
+  inner_join(nrcValues, by = c("word" = "x"))
+advice = advice %>%
+  inner_join(nrcWord, by = c("word" = "word"))
+advice = advice %>%
+  rename("adv_word" = "word",
+         "adv_score" = "y",
+         "adv_sent" = "sentiment")
+
+```
+
+***
+
+### Frequency Analysis
+For my analysis, I'll first be taking a look at frequency of sentiments and words within those sentiments/types of reviews to see if there are any trends within the data (in terms of what major considerations are, what topics are mostly talked about, etc). I'll also be placing average sentiment values within the main dataset to see if there are any strong relationships within those variables.
+
+First, let's get the frequency of sentiments and words within those sentiments in pro reviews.
+
+```{r}
+### Getting Frequency in Pro Reviews
+pros %>%
+  group_by(pro_sent) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  ggplot(aes(reorder(pro_sent, count), count, fill = pro_sent)) +
+  geom_bar(alpha = 1, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(title = "Frequency per Sentiment in Pro Reviews",
+       y = "Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+```
+
+> In pro reviews, generally positive sentiments (positive, trust, anticipation, joy, surprise) far outweigh the rest of the other sentiments. This is what we expect from these reviews. Let's see what words are used the most for each sentiment.
+
+```{r}
+pros %>%
+  count(pro_sent, pro_word) %>%
+  filter(pro_sent %in% c("positive","negative","joy","trust","fear","anger")) %>%
+  group_by(pro_sent) %>%
+  top_n(10) %>%
+  ungroup %>%
+  mutate(pro_word = reorder(pro_word, n)) %>%
+  mutate(pro_sent = as.factor(pro_sent)) %>%
+  ggplot(mapping = aes(pro_word, n, fill = pro_sent)) +
+  geom_bar(alpha = 0.8, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~pro_sent, scales = "free") +
+  labs(title = "Frequency of Sentiment/Words in Pro Reviews",
+       y = "Total Number of Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+```
+
+> We can see here that "good" obviously makes up most of the occurrences for sentiment, while "management" comes at a close second - indicating that management (among other factors like pay, culture, etc which are also highly mentioned) could be a key consideration when employees assess a workplace.
+
+```{r}
+`%notin%` = Negate(`%in%`) #this should really be its own function
+
+bigrams_pro = gs %>%
+  select(pros) %>%
+  unnest_tokens(., ngrams, pros, token = "ngrams", n = 2) %>%
+  tidyr::separate(ngrams, c("word1","word2"), sep = "\\s") %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en")) 
+
+datatable(bigrams_pro, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2'),backgroundColor = "black")
+
+trigrams_pro = gs %>%
+  select(pros) %>%
+  unnest_tokens(., ngrams, pros, token = "ngrams", n = 3) %>%
+  tidyr::separate(ngrams, c("word1","word2","word3"), sep = "\\s") %>%
+  count(word1, word2, word3, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en")) %>%
+  filter(word3 %notin% stopwords("en"))
+
+datatable(trigrams_pro, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2','word3'),backgroundColor = "black")
+
+```
+> When looking at ngrams (in this case, bigrams and trigrams), we're able to see words that are often used in pro reviews. It now seems like work-life balance takes up a big share of pro reviews, which now indicates that this is a major consideration when employees assess companies. Some other combinations of note are "good/friendly work environment", "good benefits/pay", "open door policy".
+
+Let's see what the trends are in con reviews.
+
+
+```{r}
+cons %>%
+  group_by(con_sent) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  ggplot(aes(reorder(con_sent, count), count, fill = con_sent)) +
+  geom_bar(alpha = 1, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(title = "Frequency per Sentiment in Con Reviews",
+       y = "Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+
+```
+
+> We can still see a majority of word occurrences being in the "positive" sentiment, with a mix of both positive and negative sentiments in the rankings. Let's see which words occur the most for relevant sentiments.
+
+```{r}
+cons %>%
+  count(con_sent, con_word) %>%
+  filter(con_sent %in% c("negative","trust","sadness","fear","anger","disgust")) %>%
+  group_by(con_sent) %>%
+  top_n(10) %>%
+  ungroup %>%
+  mutate(con_word = reorder(con_word, n)) %>%
+  mutate(con_sent = as.factor(con_sent)) %>%
+  ggplot(mapping = aes(con_word, n, fill = con_sent)) +
+  geom_bar(alpha = 0.8, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~con_sent, scales = "free") +
+  labs(title = "Frequency of Sentiment/Words in Con Reviews",
+       y = "Total Number of Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+```
+
+> Again, "management" is one of the most talked-about topics in the reviews, with words like "limited" and "lack" (which connotes something not meeting expectation) having high frequency as well. "Terrible" and "horrible" also make a lot of appearances in these lists, which gives a sense of the degree of negativity in these reviews.
+
+Let's look at which ngrams appear the most.
+
+```{r}
+bigrams_con = gs %>%
+  select(cons) %>%
+  unnest_tokens(., ngrams, cons, token = "ngrams", n = 2) %>%
+  tidyr::separate(ngrams, c("word1","word2"), sep = "\\s") %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en"))  %>%
+  filter(word1 != "t") %>%
+  filter(word2 != "t")
+
+datatable(bigrams_con, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2'),backgroundColor = "black")
+
+trigrams_con = gs %>%
+  select(cons) %>%
+  unnest_tokens(., ngrams, cons, token = "ngrams", n = 3) %>%
+  tidyr::separate(ngrams, c("word1","word2","word3"), sep = "\\s") %>%
+  count(word1, word2, word3, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en")) %>%
+  filter(word3 %notin% stopwords("en")) %>%
+  filter(word1 != "t") %>%
+  filter(word2 != "t") %>%
+  filter(word3 != "t")
+
+datatable(trigrams_con, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2','word3'),backgroundColor = "black")
+```
+
+> A lot of reviews again seem to include the terms "work-life balance" (by an overwhelming margin), "senior/upper management". The reviews also now include mention of "long working hours", "old boys club", and "extremely high turnover" - which puts a lot of concern on job security and treatment of certain subgroups within companies. Again, a lot of consideration seems to be placed on work-life balance and management decisions (on HR, opportunities within the company, and overall working hours).
+
+Lastly, let's see what the trends are for advice.
+
+```{r}
+advice %>%
+  group_by(adv_sent) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  ggplot(aes(reorder(adv_sent, count), count, fill = adv_sent)) +
+  geom_bar(alpha = 1, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(title = "Frequency per Sentiment in Company Advice",
+       y = "Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+
+```
+
+> The results for advice are more similar to pro reviews rather than con reviews. Again, a lot of emphasis is placed on trust and anticipation - which is to be expected for advice inputs.
+
+Taking a look at word distribution for relevant sentiments...
+
+```{r}
+advice %>%
+  count(adv_sent, adv_word) %>%
+  filter(adv_sent %in% c("positive","trust","anticipation","joy","negative","anger","sadness", "fear")) %>%
+  group_by(adv_sent) %>%
+  top_n(10) %>%
+  ungroup %>%
+  mutate(adv_word = reorder(adv_word, n)) %>%
+  mutate(adv_sent = as.factor(adv_sent)) %>%
+  ggplot(mapping = aes(adv_word, n, fill = adv_sent)) +
+  geom_bar(alpha = 0.8, show.legend = FALSE, stat = "identity") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap(~adv_sent, scales = "free") +
+  labs(title = "Frequency of Sentiment/Words in Company Advice",
+       y = "Total Number of Occurrences",
+       x = "") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+```
+
+> Management and pay/benefits seem to be a common topic among advice, as well as "leave". This doesn't really tell us what exactly these comments are talking about. So let's look at n-grams.
+
+```{r}
+bigrams_adv = gs %>%
+  select(advice) %>%
+  na.omit() %>%
+  unnest_tokens(., ngrams, advice, token = "ngrams", n = 2) %>%
+  tidyr::separate(ngrams, c("word1","word2"), sep = "\\s") %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en"))  %>%
+  filter(word1 != "t") %>%
+  filter(word2 != "t") %>%
+  filter(word2 != "s")
+
+datatable(bigrams_adv, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2'),backgroundColor = "black")
+
+trigrams_adv = gs %>%
+  select(advice) %>%
+  na.omit() %>%
+  unnest_tokens(., ngrams, advice, token = "ngrams", n = 3) %>%
+  tidyr::separate(ngrams, c("word1","word2","word3"), sep = "\\s") %>%
+  count(word1, word2, word3, sort = TRUE) %>%
+  filter(word1 %notin% stopwords("en")) %>%
+  filter(word2 %notin% stopwords("en")) %>%
+  filter(word3 %notin% stopwords("en")) %>%
+  filter(word1 != "t") %>%
+  filter(word2 != "t") %>%
+  filter(word3 != "t")
+
+datatable(trigrams_adv, options = list(pageLength = 10)) %>%
+  formatStyle('n', color = "black", backgroundColor = "#0CAA41",fontWeight = "bold") %>%
+  formatStyle(c(' ','word1','word2','word3'),backgroundColor = "black")
+```
+
+> In terms of bigrams, the major considerations remain mostly the same, especially with work-life balance. In terms of trigrams, the situation is very similar. Work life balance is mentioned more often, along with some other topics like "long-term strategy/longer-term view", "performance review process", "employee engagement programs". Other than work-life balance, consideration also seems to be placed on long-term strategies (which could go with our previous observation of high turnover being mentioned a lot) and employee engagement/welfare.
+
+***
+
+### Relationship Analysis
+
+Let's look for any significant relationships between the ratings and any of the text features, and see if there are any patterns in these relationships.
+
+```{r}
+proSummary = pros %>%
+  group_by(id) %>%
+  summarize(sumPro = sum(pro_score),
+            countPro = n(),
+            posPro = sum(pro_sent == "positive"),
+            negPro = sum(pro_sent == "negative"))
+conSummary = cons %>%
+  group_by(id) %>%
+  summarize(sumCon = sum(con_score),
+            countCon = n(),
+            posCon = sum(con_sent == "positive"),
+            negCon = sum(con_sent == "negative"))
+advSummary = advice %>%
+  group_by(id) %>%
+  summarize(sumAdv = sum(adv_score),
+            countAdv = n(),
+            posAdv = sum(adv_sent == "positive"),
+            negAdv = sum(adv_sent == "negative"))
+fullSumm = proSummary %>%
+  full_join(conSummary, by = c("id" = "id")) %>%
+  full_join(advSummary, by = c("id" = "id")) %>%
+  arrange(id)
+
+fullSumm = fullSumm %>%
+  mutate(sum_sent = rowSums(subset(fullSumm, select = c(sumPro, sumCon, sumAdv)), na.rm = TRUE),
+         sum_count = rowSums(subset(fullSumm, select = c(countPro, countCon, countAdv)), na.rm = TRUE),
+         ave_pro = sumPro / countPro,
+         ave_con = sumCon / countCon,
+         ave_adv = sumAdv / countAdv,
+         ave_sent = sum_sent/sum_count, 
+         sum_pos = rowSums(subset(fullSumm, select = c(posPro, posCon, posAdv)), na.rm = TRUE),
+         sum_neg = rowSums(subset(fullSumm, select = c(negPro, negCon, negAdv)), na.rm = TRUE)) %>%
+  select(id, ave_pro, ave_con, ave_adv, ave_sent, sum_pos, sum_neg)
+
+gs = gs %>%
+  full_join(fullSumm, by = c("id" = "id"))
+
+```
+
+#### Regression Statistics (Relationships between Ratings and Text Features)
+
+```{r}
+library(sjPlot)
+rating_lm = lm(rating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+wlr_lm = lm(workLifeRating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+cvr_lm = lm(cultureValueRating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+cor_lm = lm(careerOpportunityRating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+cbr_lm = lm(compBenefitsRating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+mr_lm = lm(managementRating ~ ave_pro + ave_con + ave_adv + ave_sent + sum_pos + sum_neg, data = gs)
+
+# summary(rating_lm)
+# summary(wlr_lm)
+# summary(cvr_lm)
+# summary(cor_lm)
+# summary(cbr_lm)
+# summary(mr_lm)
+# 
+# knitr::kable(tidy(rating_lm), caption = "Ratings")
+
+tab_model(rating_lm, wlr_lm, cvr_lm, cor_lm, cbr_lm, mr_lm,
+          CSS = list(
+            css.firsttablecol = 'font-weight: bold'))
+```
+
+> We can see a clear trend with these models. The text features (mostly) that have the highest significance on each of the ratings are: Average Sentiment for Cons, Average Sentiment Overall, and Sum of Negative Sentiment Words. This could mean something for the companies, as an increase in negative comments could lead to a larger fall in any kind of rating for these organizations (higher average sentiment does not only mean high positivity in the cons section since it is a con section, it could mean that more descriptive words are used and more detail is put into describing the cons of the company).
+
+Let's visualize some of these relationships (will not be visualizing all, just making a point here).
+
+```{r}
+gs %>%
+  ggplot(aes(x = ave_con, y = rating, col = organization)) +
+  geom_point(show.legend = FALSE) +
+  geom_smooth(method = "lm", col = "#0CAA41") +
+  facet_wrap(~organization) +
+  labs(title = "Relationship between Overall Rating and Average Sentiment for Cons",
+       y = "Overall Rating",
+       x = "Average Sentiment for Cons") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        axis.title = element_text(face = "bold",
+                                  color = "#0CAA41"),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+
+gs %>%
+  ggplot(aes(x = ave_sent, y = rating, col = organization)) +
+  geom_point(show.legend = FALSE) +
+  geom_smooth(method = "lm", col = "#0CAA41") +
+  facet_wrap(~organization) +
+  labs(title = "Relationship between Overall Rating and Average Overall Sentiment",
+       y = "Overall Rating",
+       x = "Average Sentiment") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        axis.title = element_text(face = "bold",
+                                  color = "#0CAA41"),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+
+gs %>%
+  ggplot(aes(x = sum_neg, y = rating, col = organization)) +
+  geom_point(show.legend = FALSE) +
+  geom_smooth(method = "lm", col = "#0CAA41") +
+  facet_wrap(~organization) +
+  labs(title = "Relationship between Overall Rating and Total Negative Sentiment Occurrences",
+       y = "Overall Rating",
+       x = "Occurrences of Negative Sentiment Words") +
+  theme(text = element_text(family = "Avenir Next",
+                            color = 'white'),
+        plot.title = element_text(color = "#0CAA41",
+                                  face = "bold"),
+        axis.text = element_text(color = 'white'),
+        axis.title = element_text(face = "bold",
+                                  color = "#0CAA41"),
+        plot.background = element_rect(fill = 'black'),
+        panel.background = element_rect(fill = 'black'))
+```
+
+> From these visualizations, we don't see much of an effect as Average Sentiment for Cons increases (as opposed to the regression summaries themselves), but we do see more significant effects as Average Overall Sentiment and Occurrences of Negative Sentiment Words increases. This does make some sort of sense, as relatively negative comments usually have more effect on a person's POV on anything compared to relatively positive comments. People do like seeing strengths of companies and people, but they hate seeing flaws even more. 
+
+***
+
+## Topic Models {.tabset .tabset-fade .tabset-pills}
+
+### Determining K
+
+```{r, message = FALSE}
+# Fixing Dataset
+library(stm)
+gstm = gs %>%
+  mutate(fulltext = paste(pros, cons, advice, sep = " ")) %>%
+  select(id, organization, fulltext, rating, workLifeRating, cultureValueRating, careerOpportunityRating, compBenefitsRating, managementRating)
+gstm$fulltext = str_remove_all(gstm$fulltext, "NA")
+
+set.seed(1001)
+holdoutRows = sample(1:nrow(gstm), 100, replace = FALSE)
+
+reviewText = textProcessor(documents = gstm$fulltext[-c(holdoutRows)], 
+                          metadata = gstm[-c(holdoutRows), ], 
+                          stem = FALSE)
+
+reviewPrep = prepDocuments(documents = reviewText$documents, 
+                               vocab = reviewText$vocab,
+                               meta = reviewText$meta)
+
+load("/Volumes/GoogleDrive/My Drive/Laptop Files/1920B1/MW 1 Unstructured Data Analytics/02 Assignments/Homework 2/Homework 2/kOut.RData")
+kTest = kTest
+plot(kTest)
+
+```
+
+> It looks like 4 topics is the ideal number since it's at that point that the diagnostic values drop off significantly (though there are some fluctuations in semantic coherence).
+
+### Forming Topic Models
+
+Time to determine our topic models.
+
+```{r}
+topics4 = stm(documents = reviewPrep$documents,
+             vocab = reviewPrep$vocab, seed = 1001,
+             K = 4, verbose = FALSE)
+
+plot(topics4)
+
+labelTopics(topics4)
+```
+
+> After scanning through the different topics, I could say that they're pretty diverse: topic 1 seems to talk a lot about cons of the company (rather broadly), topic 2 revolves around consulting firms and the corporate ladder, topic 3 talks mostly about the work environment, and topic 4 seems to be about benefits.
+
+```{r}
+findThoughts(topics4, texts = reviewPrep$meta$fulltext, n = 4)
+```
+
+> If we look at reviews that are highly associated with each topic, there seems to be something different with my interpretation. Topic 1 seems to have a lot of reviews that state negative perceptions then immediately negate them by building up the company. Topics 2 seems relatively in line with what my initial analyses were. Topic 3 further elaborates on the work environment but on the negative side, narrating experiences with dysfunctional work environments. Topic 4 on the other hand, does talk about benefits, but talks primarily about the lack of benefits and other cons of the company. There's an even split (at least in these samples), but there's more emphasis and volume placed in the negative reviews.
+
+
+```{r}
+newReviewText = textProcessor(documents = gstm$fulltext[holdoutRows], 
+                          metadata = gstm[holdoutRows, ], 
+                          stem = FALSE)
+
+newReviewCorp = alignCorpus(new = newReviewText, old.vocab = topics4$vocab)
+
+newReviewFitted = fitNewDocuments(model = topics4, documents = newReviewCorp$documents, 
+                newData = newReviewCorp$meta, origData = reviewPrep$meta)
+
+predictorText = textProcessor(documents = gstm$fulltext, 
+                          metadata = gstm, 
+                          stem = FALSE)
+
+reviewPrep2 = prepDocuments(documents = predictorText$documents, 
+                               vocab = predictorText$vocab,
+                               meta = predictorText$meta)
+
+topicPredictor = stm(documents = reviewPrep2$documents,
+             vocab = reviewPrep2$vocab, prevalence = ~ rating,
+             data = reviewPrep2$meta, K = 4, verbose = FALSE)
+
+ratingEffect = estimateEffect(1:4 ~ rating, stmobj = topicPredictor,
+               metadata = reviewPrep2$meta)
+
+summary(ratingEffect, topics = c(1:4))
+```
+
+### Comparing Relationship with Overall Rating
+
+```{r}
+plot.estimateEffect(ratingEffect, "rating", method = "continuous",
+                    model = topicPredictor, topics = 1, labeltype = "frex",
+                    main = "Topic 1",
+                    family = "Avenir Next")
+```
+
+> We can see that as the expected topic proportion for topic 1 rises, it has a very positive effect on rating. This could mean that reviews that negate negative effects to build up the company are written by people that look very highly on the organization and also want to raise the overall rating of the organization. Since they would want to build on the company and offset any negative impressions of the company, they would make their ratings significantly higher.
+
+```{r}
+plot.estimateEffect(ratingEffect, "rating", method = "continuous",
+                    model = topicPredictor, topics = 2, labeltype = "frex",
+                    main = "Topic 2",
+                    family = "Avenir Next")
+```
+
+> In this case, many consulting companies and employees value their work in terms of projects and opportunities. So, the more the topic is discussed (i.e. the reviewer has significantly more experiences/more to say about the experiences), the higher the rating is for the organization.
+
+```{r}
+plot.estimateEffect(ratingEffect, "rating", method = "continuous",
+                    model = topicPredictor, topics = 3, labeltype = "frex",
+                    main = "Topic 3",
+                    family = "Avenir Next")
+```
+
+> This topic now shows a negative relationship with org rating. As I discussed above, the topic generally talks about negative experiences within the work environment. So, the more those experiences are talked about, the lower the rating is for organizations. In this case, the relationship has higher variations with its results as the previous two, so some topics could also be talking about experiences with the work environment but not as negative (or even positive).
+
+```{r}
+plot.estimateEffect(ratingEffect, "rating", method = "continuous",
+                    model = topicPredictor, topics = 4, labeltype = "frex",
+                    main = "Topic 4",
+                    family = "Avenir Next")
+```
+
+> Obviously, this one would also be negative. The sample words shown connote very negative sentiments and the samples shown above have more emphasis and volume placed on the negative views within the topic. So, the more the topic is discussed, the overall rating of the organization sinks. There's also less variation in the results.
+
